@@ -55,7 +55,7 @@ export default function VideoPage() {
     if (video?.source === 'pixabay') {
       setShowToast(true);
       clearTimeout(toastTimer.current);
-      toastTimer.current = setTimeout(() => setShowToast(false), 5000);
+      toastTimer.current = setTimeout(() => setShowToast(false), 3000);
     }
   }, [video]);
 
@@ -140,8 +140,8 @@ export default function VideoPage() {
       </div>
 
       {showToast && (
-        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2.5 bg-yellow-500/10 border border-yellow-500/30 rounded-lg backdrop-blur-md shadow-lg">
-          <span className="text-xs text-yellow-400">pixabay资源可能为无声视频资源哦</span>
+        <div className="fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-2.5 bg-yellow-500/10 border border-yellow-500/30 rounded-lg backdrop-blur-md shadow-lg">
+          <span className="text-xs text-yellow-400">Pixabay多数可能为无声资源哦~</span>
           <button onClick={() => setShowToast(false)} className="text-yellow-400/60 hover:text-yellow-400 text-xs">✕</button>
         </div>
       )}
