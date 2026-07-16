@@ -1,4 +1,4 @@
-import type { VideoItem } from './types.js';
+import type { VideoItem } from '../types.js';
 
 class VideoCache {
   private cache = new Map<string, VideoItem>();
