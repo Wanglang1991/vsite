@@ -1,5 +1,5 @@
 import { config } from '../config.js';
-import { getCache, setCache } from './cache.js';
+import { getCache, setCache, shouldRefresh, markRefreshing, refreshDone } from './cache.js';
 import type { VideoItem, VideoQuality } from '../types.js';
 
 const BASE = 'https://api.pexels.com/videos';
@@ -14,13 +14,7 @@ interface PexelsVideo {
 
 type VideoResult = { videos: VideoItem[]; total: number };
 
-export async function fetchPexelsVideos(query: string, page = 1, perPage = 20): Promise<VideoResult> {
-  const cacheKey = 'pexels:' + query + ':' + page + ':' + perPage;
-  const cached = getCache<VideoResult>(cacheKey);
-  if (cached) return cached;
-
-  if (!config.pexelsApiKey) return { videos: [], total: 0 };
-
+async function doFetch(query: string, page: number, perPage: number): Promise<VideoResult> {
   const url = query
     ? BASE + '/search?query=' + encodeURIComponent(query) + '&page=' + page + '&per_page=' + perPage
     : BASE + '/popular?page=' + page + '&per_page=' + perPage;
@@ -30,9 +24,28 @@ export async function fetchPexelsVideos(query: string, page = 1, perPage = 20): 
 
   const data = await res.json() as { videos: PexelsVideo[]; total_results: number };
   const videos: VideoItem[] = (data.videos || []).map(mapPexelsVideo);
-  const result: VideoResult = { videos, total: data.total_results || 0 };
-  setCache(cacheKey, result, config.cacheTtlMs);
-  return result;
+  return { videos, total: data.total_results || 0 };
+}
+
+export async function fetchPexelsVideos(query: string, page = 1, perPage = 20): Promise<VideoResult> {
+  if (!config.pexelsApiKey) return { videos: [], total: 0 };
+
+  const cacheKey = 'pexels:' + query + ':' + page + ':' + perPage;
+
+  // 1. 有缓存直接返回，同时触发后台刷新
+  const cached = getCache<VideoResult>(cacheKey);
+  if (cached) {
+    if (cached.stale && shouldRefresh(cacheKey)) {
+      markRefreshing(cacheKey);
+      doFetch(query, page, perPage).then(data => refreshDone(cacheKey, data));
+    }
+    return cached.data;
+  }
+
+  // 2. 无缓存，同步拉取
+  const data = await doFetch(query, page, perPage);
+  setCache(cacheKey, data);
+  return data;
 }
 
 function mapPexelsVideo(v: PexelsVideo): VideoItem {

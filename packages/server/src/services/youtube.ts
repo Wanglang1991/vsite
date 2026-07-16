@@ -1,5 +1,5 @@
 import { config } from '../config.js';
-import { getCache, setCache } from './cache.js';
+import { getCache, setCache, shouldRefresh, markRefreshing, refreshDone } from './cache.js';
 import type { VideoItem } from '../types.js';
 
 const BASE = 'https://www.googleapis.com/youtube/v3';
@@ -17,13 +17,7 @@ interface YTSearchItem {
 
 type VideoResult = { videos: VideoItem[]; total: number; nextPageToken?: string };
 
-export async function fetchYouTubeVideos(query: string, page = 1, perPage = 20): Promise<VideoResult> {
-  const cacheKey = 'youtube:' + query + ':' + page + ':' + perPage;
-  const cached = getCache<VideoResult>(cacheKey);
-  if (cached) return cached;
-
-  if (!config.youtubeApiKey) return { videos: [], total: 0 };
-
+async function doFetch(query: string, page: number, perPage: number): Promise<VideoResult> {
   const params = new URLSearchParams({
     part: 'snippet',
     q: query || 'trending',
@@ -71,9 +65,26 @@ export async function fetchYouTubeVideos(query: string, page = 1, perPage = 20):
     createdAt: item.snippet.publishedAt,
   }));
 
-  const result: VideoResult = { videos, total: data.pageInfo?.totalResults || 0, nextPageToken: data.nextPageToken };
-  setCache(cacheKey, result, config.cacheTtlMs);
-  return result;
+  return { videos, total: data.pageInfo?.totalResults || 0, nextPageToken: data.nextPageToken };
+}
+
+export async function fetchYouTubeVideos(query: string, page = 1, perPage = 20): Promise<VideoResult> {
+  if (!config.youtubeApiKey) return { videos: [], total: 0 };
+
+  const cacheKey = 'youtube:' + query + ':' + page + ':' + perPage;
+
+  const cached = getCache<VideoResult>(cacheKey);
+  if (cached) {
+    if (cached.stale && shouldRefresh(cacheKey)) {
+      markRefreshing(cacheKey);
+      doFetch(query, page, perPage).then(data => refreshDone(cacheKey, data));
+    }
+    return cached.data;
+  }
+
+  const data = await doFetch(query, page, perPage);
+  setCache(cacheKey, data);
+  return data;
 }
 
 function parseISO8601Duration(duration: string): number {

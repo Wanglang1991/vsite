@@ -1,5 +1,5 @@
 import { config } from '../config.js';
-import { getCache, setCache } from './cache.js';
+import { getCache, setCache, shouldRefresh, markRefreshing, refreshDone } from './cache.js';
 import type { VideoItem, VideoQuality } from '../types.js';
 
 const BASE = 'https://pixabay.com/api/videos/';
@@ -16,13 +16,7 @@ interface PixabayVideo {
 
 type VideoResult = { videos: VideoItem[]; total: number };
 
-export async function fetchPixabayVideos(query: string, page = 1, perPage = 20): Promise<VideoResult> {
-  const cacheKey = 'pixabay:' + query + ':' + page + ':' + perPage;
-  const cached = getCache<VideoResult>(cacheKey);
-  if (cached) return cached;
-
-  if (!config.pixabayApiKey) return { videos: [], total: 0 };
-
+async function doFetch(query: string, page: number, perPage: number): Promise<VideoResult> {
   const safePerPage = Math.max(3, perPage);
   const params = new URLSearchParams({
     key: config.pixabayApiKey,
@@ -31,17 +25,30 @@ export async function fetchPixabayVideos(query: string, page = 1, perPage = 20):
     per_page: String(safePerPage),
   });
 
-  try {
-    const res = await fetch(BASE + '?' + params.toString());
-    if (!res.ok) return { videos: [], total: 0 };
-    const data = await res.json() as { hits: PixabayVideo[]; total: number };
-    const videos: VideoItem[] = (data.hits || []).slice(0, perPage).map(mapPixabayVideo);
-    const result: VideoResult = { videos, total: data.total || 0 };
-    setCache(cacheKey, result, config.cacheTtlMs);
-    return result;
-  } catch {
-    return { videos: [], total: 0 };
+  const res = await fetch(BASE + '?' + params.toString());
+  if (!res.ok) return { videos: [], total: 0 };
+  const data = await res.json() as { hits: PixabayVideo[]; total: number };
+  const videos: VideoItem[] = (data.hits || []).slice(0, perPage).map(mapPixabayVideo);
+  return { videos, total: data.total || 0 };
+}
+
+export async function fetchPixabayVideos(query: string, page = 1, perPage = 20): Promise<VideoResult> {
+  if (!config.pixabayApiKey) return { videos: [], total: 0 };
+
+  const cacheKey = 'pixabay:' + query + ':' + page + ':' + perPage;
+
+  const cached = getCache<VideoResult>(cacheKey);
+  if (cached) {
+    if (cached.stale && shouldRefresh(cacheKey)) {
+      markRefreshing(cacheKey);
+      doFetch(query, page, perPage).then(data => refreshDone(cacheKey, data));
+    }
+    return cached.data;
   }
+
+  const data = await doFetch(query, page, perPage);
+  setCache(cacheKey, data);
+  return data;
 }
 
 const QUALITY_ORDER = ['large', 'medium', 'small', 'tiny'] as const;
