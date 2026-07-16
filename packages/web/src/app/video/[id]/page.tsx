@@ -56,7 +56,7 @@ export default function VideoPage() {
 
         <div className="flex flex-col lg:flex-row gap-6">
           <div className="flex-1 min-w-0">
-            <VideoPlayer src={video.url} poster={video.thumbnail} />
+            <VideoPlayer src={video.url} poster={video.thumbnail} qualities={video.qualities} />
             <h1 className="text-xl font-semibold text-white mt-4">{video.title}</h1>
             <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-400">
               <span className="flex items-center gap-1">

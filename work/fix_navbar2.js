@@ -1,4 +1,7 @@
-'use client';
+const fs = require("fs");
+const base = "C:/Users/Administrator/Documents/Codex/2026-07-16/new-chat/packages/web/src/components/Navbar.tsx";
+
+const navbar = `'use client';
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import Link from 'next/link';
@@ -65,7 +68,7 @@ export default function Navbar() {
           <div ref={searchContainerRef} className="flex-1 max-w-xl mx-auto relative">
             <div className="flex items-center h-9 bg-white/10 hover:bg-white/15 border border-white/10 rounded-full px-4 gap-2 transition">
               <Search className="w-4 h-4 text-gray-400 shrink-0" />
-              <input ref={inputRef} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onFocus={handleFocus} placeholder="搜索视频..." className="flex-1 bg-transparent text-white text-sm outline-none placeholder-gray-500" autoComplete="off" />
+              <input ref={inputRef} value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onFocus={handleFocus} placeholder="\u641c\u7d22\u89c6\u9891..." className="flex-1 bg-transparent text-white text-sm outline-none placeholder-gray-500" autoComplete="off" />
               {searchQuery && <button onClick={handleClear} className="shrink-0 p-0.5 hover:bg-white/10 rounded-full transition"><X className="w-3.5 h-3.5 text-gray-400" /></button>}
             </div>
           </div>
@@ -79,3 +82,6 @@ export default function Navbar() {
     </>
   );
 }
+`;
+fs.writeFileSync(base, navbar);
+console.log("Navbar updated with global click-to-close + blur");

@@ -62,6 +62,7 @@ export async function fetchYouTubeVideos(query: string, page = 1, perPage = 20):
     duration: durations[item.id.videoId] || 0,
     views: 0, likes: 0,
     source: 'youtube' as const,
+    qualities: [],
     url: '',
     author: { name: item.snippet.channelTitle, avatar: '' },
     tags: item.snippet.tags || [],

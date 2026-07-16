@@ -1,3 +1,10 @@
+export interface VideoQuality {
+  label: string;
+  src: string;
+  width: number;
+  height: number;
+}
+
 export interface VideoItem {
   id: string;
   title: string;
@@ -8,6 +15,7 @@ export interface VideoItem {
   likes: number;
   source: 'pexels' | 'pixabay' | 'youtube' | 'tmdb';
   url: string;
+  qualities: VideoQuality[];
   author: {
     name: string;
     avatar: string;

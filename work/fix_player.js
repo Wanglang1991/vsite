@@ -1,4 +1,7 @@
-'use client';
+const fs = require("fs");
+const base = "C:/Users/Administrator/Documents/Codex/2026-07-16/new-chat/packages/web/src/components";
+
+const videoPlayer = `'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import videojs from 'video.js';
@@ -19,9 +22,8 @@ export default function VideoPlayer({ src, poster, qualities, onReady }: VideoPl
   const [currentQuality, setCurrentQuality] = useState<string>('');
   const [showQualityMenu, setShowQualityMenu] = useState(false);
 
-  const sortedQualities = qualities ? [...qualities].sort((a, b) => a.height - b.height) : null;
-  const sources = sortedQualities && sortedQualities.length > 0
-    ? sortedQualities.map(q => ({ src: q.src, type: 'video/mp4', label: q.label }))
+  const sources = qualities && qualities.length > 0
+    ? qualities.map(q => ({ src: q.src, type: 'video/mp4', label: q.label }))
     : [{ src, type: 'video/mp4' as const, label: 'auto' }];
 
   useEffect(() => {
@@ -99,7 +101,7 @@ export default function VideoPlayer({ src, poster, qualities, onReady }: VideoPl
       </div>
 
       {/* Quality selector overlay */}
-      {sortedQualities && sortedQualities.length > 1 && (
+      {qualities && qualities.length > 1 && (
         <div className="absolute bottom-12 right-3 z-10">
           <button
             onClick={() => setShowQualityMenu(!showQualityMenu)}
@@ -116,7 +118,7 @@ export default function VideoPlayer({ src, poster, qualities, onReady }: VideoPl
               >
                 auto
               </button>
-              {sortedQualities.map(q => (
+              {qualities.map(q => (
                 <button
                   key={q.label}
                   onClick={() => switchQuality(q)}
@@ -132,3 +134,6 @@ export default function VideoPlayer({ src, poster, qualities, onReady }: VideoPl
     </div>
   );
 }
+`;
+fs.writeFileSync(base + "/VideoPlayer.tsx", videoPlayer);
+console.log("VideoPlayer updated");

@@ -1,6 +1,6 @@
 import { config } from '../config.js';
 import { getCache, setCache } from './cache.js';
-import type { VideoItem } from '../types.js';
+import type { VideoItem, VideoQuality } from '../types.js';
 
 const BASE = 'https://api.pexels.com/videos';
 
@@ -36,7 +36,14 @@ export async function fetchPexelsVideos(query: string, page = 1, perPage = 20): 
 }
 
 function mapPexelsVideo(v: PexelsVideo): VideoItem {
-  const bestFile = v.video_files.find(f => f.quality === 'hd') || v.video_files[0];
+  const qualities: VideoQuality[] = v.video_files.map(f => ({
+    label: f.quality,
+    src: f.link,
+    width: f.width,
+    height: f.height,
+  }));
+  const hd = v.video_files.find(f => f.quality === 'hd') || v.video_files[0];
+
   return {
     id: 'pexels-' + v.id,
     title: v.url.split('/').pop()?.split('-').slice(0, -1).join(' ') || 'Untitled',
@@ -45,11 +52,12 @@ function mapPexelsVideo(v: PexelsVideo): VideoItem {
     duration: v.duration,
     views: 0, likes: 0,
     source: 'pexels',
-    url: bestFile?.link || v.url,
+    url: hd?.link || v.url,
+    qualities,
     author: { name: v.user.name, avatar: '' },
     tags: [],
     category: 'stock',
-    resolution: bestFile ? bestFile.height + 'p' : '720p',
+    resolution: hd ? hd.height + 'p' : '720p',
     createdAt: new Date().toISOString(),
   };
 }
