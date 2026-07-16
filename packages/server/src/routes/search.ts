@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { fetchPexelsVideos } from '../services/pexels.js';
 import { fetchPixabayVideos } from '../services/pixabay.js';
 import { fetchYouTubeVideos } from '../services/youtube.js';
+import { videoCache } from '../services/videoCache.js';
 import type { VideoItem } from '../types.js';
 
 export async function searchRoutes(app: FastifyInstance) {
@@ -15,6 +16,10 @@ export async function searchRoutes(app: FastifyInstance) {
       fetchPixabayVideos(q, page, 20).catch(() => ({ videos: [] as VideoItem[], total: 0 })),
       fetchYouTubeVideos(q, page, 20).catch(() => ({ videos: [] as VideoItem[], total: 0 })),
     ]);
+
+    videoCache.setAll(pexels.videos);
+    videoCache.setAll(pixabay.videos);
+    videoCache.setAll(youtube.videos);
 
     const all = [...pexels.videos, ...pixabay.videos, ...youtube.videos];
     return {

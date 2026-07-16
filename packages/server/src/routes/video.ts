@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { fetchPexelsVideos } from '../services/pexels.js';
 import { fetchPixabayVideos } from '../services/pixabay.js';
 import { fetchYouTubeVideos } from '../services/youtube.js';
+import { videoCache } from '../services/videoCache.js';
 import type { VideoItem, VideoListResponse } from '../types.js';
 
 function mergeAndShuffle(arrays: VideoItem[][]): VideoItem[] {
@@ -25,6 +26,10 @@ export async function videoRoutes(app: FastifyInstance) {
       fetchYouTubeVideos(q, page, perPage).catch(() => ({ videos: [] as VideoItem[], total: 0 })),
     ]);
 
+    videoCache.setAll(pexels.videos);
+    videoCache.setAll(pixabay.videos);
+    videoCache.setAll(youtube.videos);
+
     const all = mergeAndShuffle([pexels.videos, pixabay.videos, youtube.videos]);
     const total = pexels.total + pixabay.total + youtube.total;
 
@@ -40,15 +45,21 @@ export async function videoRoutes(app: FastifyInstance) {
 
   app.get<{ Params: { id: string } }>('/api/videos/:id', async (req, reply) => {
     const { id } = req.params;
+
+    let video = videoCache.get(id);
+    if (video) return video;
+
     const [pexels, pixabay, youtube] = await Promise.all([
       fetchPexelsVideos('', 1, 50).catch(() => ({ videos: [] as VideoItem[], total: 0 })),
       fetchPixabayVideos('', 1, 50).catch(() => ({ videos: [] as VideoItem[], total: 0 })),
       fetchYouTubeVideos('', 1, 50).catch(() => ({ videos: [] as VideoItem[], total: 0 })),
     ]);
 
-    const all = [...pexels.videos, ...pixabay.videos, ...youtube.videos];
-    const video = all.find(v => v.id === id);
+    videoCache.setAll(pexels.videos);
+    videoCache.setAll(pixabay.videos);
+    videoCache.setAll(youtube.videos);
 
+    video = videoCache.get(id);
     if (!video) return reply.status(404).send({ error: 'Video not found' });
     return video;
   });

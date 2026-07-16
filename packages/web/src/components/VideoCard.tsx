@@ -1,18 +1,31 @@
-import Link from 'next/link';
-import type { VideoItem } from '@/types';
+'use client';
+
 import { formatDuration, formatViews } from '@/lib/api';
+import type { VideoItem } from '@/types';
+import { AlertTriangle } from 'lucide-react';
+import Link from 'next/link';
+import { useState } from 'react';
 
 export default function VideoCard({ video }: { video: VideoItem }) {
+  const [imgError, setImgError] = useState(false);
+
   return (
     <Link href={'/video/' + video.id} className="group block">
       {/* Thumbnail */}
       <div className="relative aspect-video rounded-lg overflow-hidden bg-gray-800">
-        <img
-          src={video.thumbnail}
-          alt={video.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-          loading="lazy"
-        />
+        {imgError || !video.thumbnail ? (
+          <div className="w-full h-full flex items-center justify-center bg-gray-800">
+            <AlertTriangle className="absolute top-2 right-2 w-4 h-4 text-yellow-500/70" />
+          </div>
+        ) : (
+          <img
+            src={video.thumbnail}
+            alt={video.title}
+            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+            loading="lazy"
+            onError={() => setImgError(true)}
+          />
+        )}
         {/* Duration overlay */}
         <span className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-black/80 text-white text-xs rounded">
           {formatDuration(video.duration)}
@@ -30,7 +43,7 @@ export default function VideoCard({ video }: { video: VideoItem }) {
           </h3>
           <p className="text-xs text-gray-400 mt-0.5">{video.author.name}</p>
           <p className="text-xs text-gray-500">
-            {formatViews(video.views)} 锟桔匡拷 锟斤拷 {video.resolution}
+            {formatViews(video.views)}&nbsp;&nbsp;{video.resolution}
           </p>
         </div>
       </div>
