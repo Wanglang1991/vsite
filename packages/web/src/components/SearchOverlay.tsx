@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { Loader2, ChevronRight } from 'lucide-react';
+import { formatDuration, formatViews, searchVideos } from '@/lib/api';
 import type { VideoItem } from '@/types';
-import { searchVideos, formatDuration, formatViews } from '@/lib/api';
+import { ChevronRight, Loader2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface SearchOverlayProps {
   open: boolean;
@@ -59,15 +59,15 @@ export default function SearchOverlay({ open, query, onQueryChange, onClose }: S
       <div data-search-overlay className={'fixed top-16 left-0 right-0 z-50 mx-auto max-w-2xl transition-all duration-400 ease-out ' + (open ? 'translate-y-0 opacity-100 visible' : '-translate-y-3 opacity-0 invisible')}>
         <div className='mx-4 bg-brand-dark/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden'>
           <div className='relative max-h-[60vh]'>
-            <div ref={listRef} onScroll={handleScroll} className='overflow-y-auto max-h-[60vh]'>
-              {loading && <div className='flex items-center justify-center py-12'><Loader2 className='w-6 h-6 text-gray-400 animate-spin'/></div>}
+            <div ref={listRef} onScroll={handleScroll} className='max-h-[60vh]'>
+              {loading && <div className='flex items-center justify-center py-12'><Loader2 className='w-6 h-6 text-gray-400 animate-spin' /></div>}
               {showEmpty && <div className='py-12 text-center text-gray-500 text-sm'>未找到相关视频</div>}
               {!query.trim() && <div className='py-12 text-center text-gray-500 text-sm'>输入关键词搜索视频</div>}
               {hasResults && <div className='py-2'>
                 {results.map(video => (
                   <button key={video.id} onClick={() => handleItemClick(video.id)} className='w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition text-left'>
                     <div className='relative w-28 h-16 shrink-0 rounded-md overflow-hidden bg-gray-800'>
-                      <img src={video.thumbnail} alt='' className='w-full h-full object-cover' loading='lazy'/>
+                      <img src={video.thumbnail} alt='' className='w-full h-full object-cover' loading='lazy' />
                       <span className='absolute bottom-0.5 right-0.5 px-1 bg-black/80 text-white text-[10px] rounded'>{formatDuration(video.duration)}</span>
                     </div>
                     <div className='min-w-0 flex-1'>
@@ -78,10 +78,10 @@ export default function SearchOverlay({ open, query, onQueryChange, onClose }: S
                 ))}
               </div>}
             </div>
-            <div className='pointer-events-none absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-brand-dark/95 to-transparent transition-opacity duration-300' style={{ opacity: Math.min(scrollTop / 20, 0.9) }}/>
-            <div className='pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-brand-dark/95 to-transparent' style={{ opacity: hasResults ? 1 : 0 }}/>
+            <div className='pointer-events-none absolute top-0 left-0 right-0 h-8 bg-gradient-to-b from-brand-dark/95 to-transparent transition-opacity duration-300' style={{ opacity: Math.min(scrollTop / 20, 0.9) }} />
+            <div className='pointer-events-none absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-brand-dark/95 to-transparent' style={{ opacity: hasResults ? 1 : 0 }} />
           </div>
-          {hasResults && <button onClick={handleMore} className='w-full flex items-center justify-center gap-1 px-4 py-3 border-t border-white/5 text-sm text-brand-blue hover:bg-white/5 transition'>查看更多结果<ChevronRight className='w-4 h-4'/></button>}
+          {hasResults && <button onClick={handleMore} className='w-full flex items-center justify-center gap-1 px-4 py-3 border-t border-white/5 text-sm text-brand-blue hover:bg-white/5 transition'>查看更多结果<ChevronRight className='w-4 h-4' /></button>}
         </div>
       </div>
     </>

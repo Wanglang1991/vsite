@@ -30,7 +30,7 @@ export default function CategoryBar() {
   }, [currentCat]);
 
   return (
-    <div className="flex gap-2 overflow-x-auto py-2 scrollbar-none">
+    <div className="flex gap-2 py-2 scrollbar-none">
       {categories.map(cat => (
         <Link key={cat.id} href={'/?cat=' + cat.id}
           className={'shrink-0 px-4 py-1.5 rounded-full text-sm transition ' + (currentCat === cat.id ? 'bg-brand-blue text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white')}>
