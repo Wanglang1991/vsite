@@ -1,26 +1,25 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-
-function getBackHref(): string {
-  try {
-    const cat = sessionStorage.getItem('vsite_last_cat');
-    if (cat) return '/?cat=' + cat;
-  } catch {}
-  return '/';
-}
 import { ArrowLeft, Eye, Calendar } from 'lucide-react';
 import type { VideoItem } from '@/types';
 import { getVideoById, formatViews } from '@/lib/api';
 import VideoPlayer from '@/components/VideoPlayer';
+import type { VideoPlayerHandle } from '@/components/VideoPlayer';
 
 export default function VideoPage() {
   const params = useParams();
   const id = params.id as string;
   const [video, setVideo] = useState<VideoItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [ambientUrl, setAmbientUrl] = useState<string | null>(null);
+  const [showToast, setShowToast] = useState(false);
+  const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const playerRef = useRef<VideoPlayerHandle>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const rafRef = useRef<number>(0);
 
   useEffect(() => {
     setLoading(true);
@@ -28,6 +27,37 @@ export default function VideoPage() {
       .then(v => { setVideo(v); setLoading(false); })
       .catch(() => setLoading(false));
   }, [id]);
+
+  // Ambient mode
+  const captureFrame = useCallback(() => {
+    const v = playerRef.current?.video;
+    const canvas = canvasRef.current;
+    if (!v || !canvas || v.paused) {
+      rafRef.current = requestAnimationFrame(captureFrame);
+      return;
+    }
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    canvas.width = 160;
+    canvas.height = 90;
+    ctx.drawImage(v, 0, 0, 160, 90);
+    setAmbientUrl(canvas.toDataURL('image/jpeg', 0.3));
+    rafRef.current = requestAnimationFrame(captureFrame);
+  }, []);
+
+  useEffect(() => {
+    rafRef.current = requestAnimationFrame(captureFrame);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [captureFrame]);
+
+  // Pixabay toast on play
+  const handlePlay = useCallback(() => {
+    if (video?.source === 'pixabay') {
+      setShowToast(true);
+      clearTimeout(toastTimer.current);
+      toastTimer.current = setTimeout(() => setShowToast(false), 5000);
+    }
+  }, [video]);
 
   if (loading) {
     return (
@@ -46,7 +76,7 @@ export default function VideoPage() {
       <div className="min-h-screen bg-brand-darker flex items-center justify-center">
         <div className="text-center">
           <p className="text-xl text-gray-400">视频未找到</p>
-          <Link href={getBackHref()} className="text-brand-blue mt-4 inline-block hover:underline">
+          <Link href="/" className="text-brand-blue mt-4 inline-block hover:underline">
             返回首页
           </Link>
         </div>
@@ -55,15 +85,31 @@ export default function VideoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-brand-darker">
-      <div className="max-w-screen-xl mx-auto px-4 py-6">
-        <Link href={getBackHref()} className="inline-flex items-center gap-1 text-gray-400 hover:text-white mb-4 transition">
+    <div className="min-h-screen bg-brand-darker relative">
+      {ambientUrl && (
+        <div
+          className="absolute inset-0 overflow-hidden pointer-events-none"
+          style={{
+            backgroundImage: 'url(' + ambientUrl + ')',
+            backgroundSize: 'cover',
+            backgroundPosition: 'center',
+            filter: 'blur(60px)',
+            transform: 'scale(1.2)',
+            opacity: 0.4,
+          }}
+        />
+      )}
+
+      <canvas ref={canvasRef} className="hidden" />
+
+      <div className="relative z-10 max-w-screen-xl mx-auto px-4 py-6">
+        <Link href="/" className="inline-flex items-center gap-1 text-gray-400 hover:text-white mb-4 transition">
           <ArrowLeft className="w-4 h-4" />
           <span className="text-sm">返回</span>
         </Link>
 
         <div className="max-w-4xl">
-          <VideoPlayer src={video.url} poster={video.thumbnail} qualities={video.qualities} />
+          <VideoPlayer ref={playerRef} src={video.url} poster={video.thumbnail} qualities={video.qualities} onPlay={handlePlay} />
           <h1 className="text-xl font-semibold text-white mt-4">{video.title}</h1>
           <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-gray-400">
             <span className="flex items-center gap-1">
@@ -92,6 +138,13 @@ export default function VideoPage() {
           </div>
         </div>
       </div>
+
+      {showToast && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2.5 bg-yellow-500/10 border border-yellow-500/30 rounded-lg backdrop-blur-md shadow-lg">
+          <span className="text-xs text-yellow-400">pixabay资源可能为无声视频资源哦</span>
+          <button onClick={() => setShowToast(false)} className="text-yellow-400/60 hover:text-yellow-400 text-xs">✕</button>
+        </div>
+      )}
     </div>
   );
 }

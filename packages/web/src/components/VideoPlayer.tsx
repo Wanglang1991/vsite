@@ -1,17 +1,27 @@
-﻿'use client';
+'use client';
 
-import { useRef, useState, useCallback, useEffect } from 'react';
+import { forwardRef, useRef, useState, useCallback, useEffect, useImperativeHandle } from 'react';
 import type { VideoQuality } from '@/types';
 import { Play, Pause, Volume2, VolumeX, Maximize } from 'lucide-react';
 
+export interface VideoPlayerHandle {
+  video: HTMLVideoElement | null;
+}
+
+
 interface VideoPlayerProps {
+  onPlay?: () => void;
   src: string;
   poster?: string;
   qualities?: VideoQuality[];
 }
 
-export default function VideoPlayer({ src, poster, qualities }: VideoPlayerProps) {
+const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function VideoPlayer({ src, poster, qualities, onPlay }, ref) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+
+  useImperativeHandle(ref, () => ({
+    get video() { return videoRef.current; },
+  }));
   const containerRef = useRef<HTMLDivElement | null>(null);
   const volumeRef = useRef<HTMLDivElement | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -98,6 +108,8 @@ export default function VideoPlayer({ src, poster, qualities }: VideoPlayerProps
     setShowQualityMenu(false);
   }, []);
 
+  const qualityRef = useRef<HTMLDivElement | null>(null);
+
   // Click outside to close volume slider
   useEffect(() => {
     if (!showVolumeSlider) return;
@@ -109,6 +121,18 @@ export default function VideoPlayer({ src, poster, qualities }: VideoPlayerProps
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [showVolumeSlider]);
+
+  // Click outside to close quality menu
+  useEffect(() => {
+    if (!showQualityMenu) return;
+    const handler = (e: MouseEvent) => {
+      if (qualityRef.current && !qualityRef.current.contains(e.target as Node)) {
+        setShowQualityMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [showQualityMenu]);
 
   const showControlsTemporarily = useCallback(() => {
     setShowControls(true);
@@ -133,16 +157,16 @@ export default function VideoPlayer({ src, poster, qualities }: VideoPlayerProps
     if (!v) return;
     const onTime = () => setCurrentTime(v.currentTime);
     const onDur = () => setDuration(v.duration);
-    const onPlay = () => setPlaying(true);
+    const onPlayEvent = () => { setPlaying(true); onPlay?.(); };
     const onPause = () => { setPlaying(false); setShowControls(true); };
     v.addEventListener('timeupdate', onTime);
     v.addEventListener('loadedmetadata', onDur);
-    v.addEventListener('play', onPlay);
+    v.addEventListener('play', onPlayEvent);
     v.addEventListener('pause', onPause);
     return () => {
       v.removeEventListener('timeupdate', onTime);
       v.removeEventListener('loadedmetadata', onDur);
-      v.removeEventListener('play', onPlay);
+      v.removeEventListener('play', onPlayEvent);
       v.removeEventListener('pause', onPause);
     };
   }, [activeSrc]);
@@ -161,6 +185,7 @@ export default function VideoPlayer({ src, poster, qualities }: VideoPlayerProps
         poster={poster}
         playsInline
         preload="metadata"
+        crossOrigin="anonymous"
         onClick={togglePlay}
       />
 
@@ -201,7 +226,7 @@ export default function VideoPlayer({ src, poster, qualities }: VideoPlayerProps
           {/* Right: quality + volume + fullscreen */}
           <div className="flex items-center gap-4">
             {sortedQualities && sortedQualities.length > 1 && (
-              <div className="relative">
+              <div ref={qualityRef} className="relative">
                 <button
                   onClick={() => { setShowQualityMenu(!showQualityMenu); setShowVolumeSlider(false); }}
                   className="h-5 flex items-center text-white/90 hover:text-white text-xs rounded transition"
@@ -255,4 +280,6 @@ export default function VideoPlayer({ src, poster, qualities }: VideoPlayerProps
       </div>
     </div>
   );
-}
+});
+
+export default VideoPlayer;

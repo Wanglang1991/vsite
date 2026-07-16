@@ -1,9 +1,8 @@
 'use client';
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { Search, X } from 'lucide-react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Search, Bell, X } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import SearchOverlay from './SearchOverlay';
 
 export default function Navbar() {
@@ -11,13 +10,8 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   const searchContainerRef = useRef<HTMLDivElement>(null);
-  const pathname = usePathname();
 
-  const logoSrc = typeof window !== 'undefined' && pathname === '/' ? (() => {
-    const p = new URLSearchParams(window.location.search);
-    const c = p.get('cat');
-    return c ? '/?cat=' + c : '/';
-  })() : '/';
+  const logoSrc = '/';
 
   const handleFocus = useCallback(() => { setSearchOpen(true); }, []);
 
@@ -70,7 +64,6 @@ export default function Navbar() {
             </div>
           </div>
           <div className="flex items-center gap-4 shrink-0">
-            <Bell className="w-5 h-5 text-gray-300 cursor-pointer hover:text-white" />
             <div className="w-8 h-8 rounded-full bg-brand-pink/80 flex items-center justify-center text-white text-sm font-medium">U</div>
           </div>
         </div>

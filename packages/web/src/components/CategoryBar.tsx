@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect } from 'react';
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-
-const CAT_STORAGE_KEY = 'vsite_last_cat';
+interface CategoryBarProps {
+  activeCat: string | null;
+  onSelect: (catId: string | null) => void;
+}
 
 const categories = [
   { id: 'animation', name: '动画' },
@@ -19,23 +18,17 @@ const categories = [
   { id: 'fashion', name: '时尚' },
 ];
 
-export default function CategoryBar() {
-  const searchParams = useSearchParams();
-  const currentCat = searchParams.get('cat');
-
-  useEffect(() => {
-    if (currentCat) {
-      try { sessionStorage.setItem(CAT_STORAGE_KEY, currentCat); } catch {}
-    }
-  }, [currentCat]);
-
+export default function CategoryBar({ activeCat, onSelect }: CategoryBarProps) {
   return (
-    <div className="flex gap-2 py-2 scrollbar-none">
+    <div className="flex gap-2 py-2">
       {categories.map(cat => (
-        <Link key={cat.id} href={'/?cat=' + cat.id}
-          className={'shrink-0 px-4 py-1.5 rounded-full text-sm transition ' + (currentCat === cat.id ? 'bg-brand-blue text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white')}>
+        <button
+          key={cat.id}
+          onClick={() => onSelect(activeCat === cat.id ? null : cat.id)}
+          className={'shrink-0 px-4 py-1.5 rounded-full text-sm transition ' + (activeCat === cat.id ? 'bg-brand-blue text-white' : 'bg-white/5 text-gray-300 hover:bg-white/10 hover:text-white')}
+        >
           {cat.name}
-        </Link>
+        </button>
       ))}
     </div>
   );

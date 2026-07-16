@@ -34,8 +34,12 @@ export default function VideoCard({ video }: { video: VideoItem }) {
 
       {/* Info */}
       <div className="mt-2 flex gap-2">
-        <div className="w-8 h-8 rounded-full bg-gray-600 shrink-0 flex items-center justify-center text-xs">
-          {video.author.name.charAt(0)}
+        <div className="w-8 h-8 rounded-full bg-gray-600 shrink-0 flex items-center justify-center text-xs overflow-hidden">
+          {video.author.avatar ? (
+            <img src={video.author.avatar} alt="" className="w-full h-full object-cover" loading="lazy" />
+          ) : (
+            video.author.name.charAt(0)
+          )}
         </div>
         <div className="min-w-0">
           <h3 className="text-sm font-medium text-gray-100 line-clamp-2 leading-snug group-hover:text-brand-blue transition">
