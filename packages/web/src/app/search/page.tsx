@@ -26,7 +26,7 @@ function SearchContent() {
   }, [q]);
 
   return (
-    <div className="min-h-screen bg-brand-darker">
+    <div className="min-h-screen bg-brand-darker overflow-x-hidden">
       <div className="sticky top-0 z-40 bg-brand-dark/95 backdrop-blur border-b border-white/10">
         <div className="max-w-screen-2xl mx-auto px-4 h-16 flex items-center gap-4">
           <Link href="/" className="shrink-0 p-1.5 hover:bg-white/10 rounded-full transition"><ArrowLeft className="w-5 h-5 text-gray-300" /></Link>
@@ -47,7 +47,7 @@ function SearchContent() {
         ) : videos.length > 0 ? <VideoGrid videos={videos} /> : (
           <div className="flex flex-col items-center justify-center py-20 text-gray-500">
             <Search className="w-12 h-12 mb-4 text-gray-600" />
-            <p className="text-lg">未找到 &ldquo;{q}&rdquo; 的相关视频</p>
+            <p className="text-lg">未找到 "{q}" 的相关视频</p>
             <p className="text-sm mt-1">请尝试其他关键词</p>
           </div>
         )}
@@ -57,5 +57,5 @@ function SearchContent() {
 }
 
 export default function SearchPage() {
-  return <Suspense fallback={<div className="min-h-screen bg-brand-darker flex items-center justify-center"><div className="text-gray-400">Loading...</div></div>}><SearchContent /></Suspense>;
+  return <Suspense fallback={<div className="min-h-screen bg-brand-darker overflow-x-hidden flex items-center justify-center"><div className="text-gray-400">Loading...</div></div>}><SearchContent /></Suspense>;
 }

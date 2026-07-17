@@ -51,7 +51,7 @@ function HomeContent() {
   };
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen overflow-x-hidden">
       <Navbar />
       <main className="pt-16 max-w-screen-2xl mx-auto px-4">
         <div className="sticky top-16 z-40 bg-brand-darker pb-2 pt-2">
@@ -77,7 +77,7 @@ function HomeContent() {
 export default function HomePage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen"><Navbar /><main className="pt-16"><div className="text-center text-gray-400 py-20">Loading...</div></main></div>
+      <div className="min-h-screen overflow-x-hidden"><Navbar /><main className="pt-16"><div className="text-center text-gray-400 py-20">Loading...</div></main></div>
     }><HomeContent /></Suspense>
   );
 }

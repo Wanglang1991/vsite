@@ -50,7 +50,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="fixed top-0 left-0 right-0 z-50 min-w-[360px] h-16 bg-brand-dark/95 backdrop-blur border-b border-white/10">
+      <nav className="fixed top-0 left-0 right-0 z-50 h-16 bg-brand-dark/95 backdrop-blur border-b border-white/10">
         <div className="max-w-screen-2xl mx-auto h-full flex items-center gap-4 px-4">
           <Link href={logoSrc} className="flex items-center gap-2 shrink-0">
             <div className="w-9 h-9 bg-brand-pink rounded-lg flex items-center justify-center text-white font-bold text-sm">VS</div>
