@@ -42,6 +42,15 @@ export default function SearchOverlay({ open, query, onQueryChange, onClose }: S
   const handleItemClick = useCallback((id: string) => { onClose(); router.push('/video/' + id); }, [onClose, router]);
 
   useEffect(() => {
+    if (open) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => { document.body.style.overflow = ''; };
+  }, [open]);
+
+  useEffect(() => {
     const handleKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
     if (open) window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
@@ -59,7 +68,7 @@ export default function SearchOverlay({ open, query, onQueryChange, onClose }: S
       <div data-search-overlay className={'fixed top-16 left-0 right-0 z-50 mx-auto max-w-2xl transition-all duration-400 ease-out ' + (open ? 'translate-y-0 opacity-100 visible' : '-translate-y-3 opacity-0 invisible')}>
         <div className='mx-4 bg-brand-dark/90 backdrop-blur-2xl border border-white/10 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden'>
           <div className='relative max-h-[60vh]'>
-            <div ref={listRef} onScroll={handleScroll} className='max-h-[60vh]'>
+            <div ref={listRef} onScroll={handleScroll} className='overflow-y-auto max-h-[60vh] overscroll-contain'>
               {loading && <div className='flex items-center justify-center py-12'><Loader2 className='w-6 h-6 text-gray-400 animate-spin' /></div>}
               {showEmpty && <div className='py-12 text-center text-gray-500 text-sm'>未找到相关视频</div>}
               {!query.trim() && <div className='py-12 text-center text-gray-500 text-sm'>输入关键词搜索视频</div>}
