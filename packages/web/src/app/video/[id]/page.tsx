@@ -85,7 +85,7 @@ export default function VideoPage() {
   }
 
   return (
-    <div className="min-h-screen bg-brand-darker relative">
+    <div className="min-h-screen bg-brand-darker relative overflow-x-hidden">
       {ambientUrl && (
         <div
           className="absolute inset-0 overflow-hidden pointer-events-none"
@@ -94,7 +94,7 @@ export default function VideoPage() {
             backgroundSize: 'cover',
             backgroundPosition: 'center',
             filter: 'blur(60px)',
-            transform: 'scale(1.2)',
+            transform: 'scale(1.05)',
             opacity: 0.4,
           }}
         />
