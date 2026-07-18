@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Search } from 'lucide-react';
+import { ArrowLeft, Search, Loader2 } from 'lucide-react';
 import type { VideoItem } from '@/types';
 import { searchVideos } from '@/lib/api';
 import VideoGrid from '@/components/VideoGrid';
@@ -14,15 +14,72 @@ function SearchContent() {
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
+  const hasMoreRef = useRef(false);
+  const pageRef = useRef(1);
+  const qRef = useRef(q);
+  const seenIdsRef = useRef<Set<string>>(new Set());
 
+  useEffect(() => { qRef.current = q; }, [q]);
+  useEffect(() => { pageRef.current = page; }, [page]);
+  useEffect(() => { hasMoreRef.current = hasMore; }, [hasMore]);
+  useEffect(() => { loadingMoreRef.current = loadingMore; }, [loadingMore]);
+
+  // Initial search
   useEffect(() => {
     if (!q) return;
+    const ids = new Set<string>();
+    seenIdsRef.current = ids;
     setLoading(true);
+    setPage(1);
+    setVideos([]);
     let cancelled = false;
-    searchVideos(q).then(data => {
-      if (!cancelled) { setVideos(data.videos); setTotal(data.total); setLoading(false); }
+    searchVideos(q, 1).then(data => {
+      if (!cancelled) {
+        data.videos.forEach(v => ids.add(v.id));
+        setVideos(data.videos);
+        setTotal(data.total);
+        setHasMore(data.hasMore ?? false);
+        setLoading(false);
+      }
     });
     return () => { cancelled = true; };
+  }, [q]);
+
+  // Infinite scroll via scroll event
+  useEffect(() => {
+    const loadMore = () => {
+      if (loadingMoreRef.current || !hasMoreRef.current) return;
+      const nextPage = pageRef.current + 1;
+      loadingMoreRef.current = true;
+      setLoadingMore(true);
+      searchVideos(qRef.current, nextPage).then(data => {
+        const newVideos = data.videos.filter(v => !seenIdsRef.current.has(v.id));
+        newVideos.forEach(v => seenIdsRef.current.add(v.id));
+        setVideos(prev => [...prev, ...newVideos]);
+        setHasMore(data.hasMore ?? false);
+        setPage(nextPage);
+        loadingMoreRef.current = false;
+        setLoadingMore(false);
+      }).catch(() => {
+        loadingMoreRef.current = false;
+        setLoadingMore(false);
+      });
+    };
+
+    const onScroll = () => {
+      const scrollBottom = window.innerHeight + window.scrollY;
+      const docBottom = document.documentElement.scrollHeight;
+      if (docBottom - scrollBottom < 300) {
+        loadMore();
+      }
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
   }, [q]);
 
   return (
@@ -44,7 +101,19 @@ function SearchContent() {
               </div>
             ))}
           </div>
-        ) : videos.length > 0 ? <VideoGrid videos={videos} /> : (
+        ) : videos.length > 0 ? (
+          <>
+            <VideoGrid videos={videos} />
+            {loadingMore && (
+              <div className="flex justify-center py-6">
+                <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
+              </div>
+            )}
+            {!hasMore && videos.length > 0 && (
+              <p className="text-center text-gray-600 text-sm py-6">已加载全部 {videos.length} 条结果</p>
+            )}
+          </>
+        ) : (
           <div className="flex flex-col items-center justify-center py-20 text-gray-500">
             <Search className="w-12 h-12 mb-4 text-gray-600" />
             <p className="text-lg">未找到 "{q}" 的相关视频</p>
