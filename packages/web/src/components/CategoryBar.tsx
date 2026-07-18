@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
+
 interface CategoryBarProps {
   activeCat: string | null;
   onSelect: (catId: string | null) => void;
@@ -18,9 +20,44 @@ const categories = [
   { id: 'fashion', name: '时尚' },
 ];
 
+const SCROLL_KEY = 'vsite_catbar_scroll';
+
 export default function CategoryBar({ activeCat, onSelect }: CategoryBarProps) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Restore scroll position on mount
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    try {
+      const saved = sessionStorage.getItem(SCROLL_KEY);
+      if (saved) el.scrollLeft = Number(saved);
+    } catch {}
+  }, []);
+
+  // Save scroll position on scroll (throttled via RAF)
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    let raf = 0;
+    const onScroll = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        try { sessionStorage.setItem(SCROLL_KEY, String(el.scrollLeft)); } catch {}
+      });
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
   return (
-    <div className="flex gap-2 py-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]">
+    <div
+      ref={scrollRef}
+      className="flex gap-2 py-2 overflow-x-auto [&::-webkit-scrollbar]:hidden [scrollbar-width:none]"
+    >
       {categories.map(cat => (
         <button
           key={cat.id}
