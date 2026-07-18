@@ -51,11 +51,16 @@ export default function Navbar() {
   return (
     <>
       <nav className="fixed top-0 left-0 right-0 z-50 h-16 bg-brand-dark/95 backdrop-blur border-b border-white/10">
-        <div className="max-w-screen-2xl mx-auto h-full flex items-center gap-4 px-4">
-          <Link href={logoSrc} className="flex items-center gap-2 shrink-0">
-            <div className="w-9 h-9 bg-brand-pink rounded-lg flex items-center justify-center text-white font-bold text-sm">VS</div>
-            <span className="text-lg font-semibold text-white hidden sm:block">VSite</span>
-          </Link>
+        <div className="max-w-screen-2xl mx-auto h-full flex items-center px-4">
+          {/* Left: equal width to right for symmetry */}
+          <div className="w-[40px] sm:w-[100px] shrink-0">
+            <Link href={logoSrc} className="flex items-center gap-2">
+              <div className="w-9 h-9 bg-brand-pink rounded-lg flex items-center justify-center text-white font-bold text-sm shrink-0">VS</div>
+              <span className="text-lg font-semibold text-white hidden sm:block">VSite</span>
+            </Link>
+          </div>
+
+          {/* Center search */}
           <div ref={searchContainerRef} className="flex-1 max-w-xl mx-auto relative">
             <div className="flex items-center h-9 bg-white/10 hover:bg-white/15 border border-white/10 rounded-full px-4 gap-2 transition">
               <Search className="w-4 h-4 text-gray-400 shrink-0" />
@@ -63,7 +68,9 @@ export default function Navbar() {
               {searchQuery && <button onClick={handleClear} className="shrink-0 p-0.5 hover:bg-white/10 rounded-full transition"><X className="w-3.5 h-3.5 text-gray-400" /></button>}
             </div>
           </div>
-          <div className="flex items-center gap-4 shrink-0">
+
+          {/* Right: equal width to left for symmetry */}
+          <div className="w-[40px] sm:w-[100px] shrink-0 flex justify-end">
             <div className="w-8 h-8 rounded-full bg-brand-pink/80 flex items-center justify-center text-white text-sm font-medium">U</div>
           </div>
         </div>

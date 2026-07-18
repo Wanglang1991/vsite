@@ -34,7 +34,17 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function Vid
   const [currentQuality, setCurrentQuality] = useState<string>('720p');
   const [showQualityMenu, setShowQualityMenu] = useState(false);
   const [showVolumeSlider, setShowVolumeSlider] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  // Track fullscreen state
+  useEffect(() => {
+    const handler = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handler);
+    return () => document.removeEventListener('fullscreenchange', handler);
+  }, []);
 
   const sortedQualities = qualities && qualities.length > 0
     ? [...qualities].sort((a, b) => b.height - a.height)
@@ -152,24 +162,34 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function Vid
     return m + ':' + sec.toString().padStart(2, '0');
   };
 
+  // Video events
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
+    const onPlay = () => setPlaying(true);
+    const onPause = () => setPlaying(false);
     const onTime = () => setCurrentTime(v.currentTime);
-    const onDur = () => setDuration(v.duration);
-    const onPlayEvent = () => { setPlaying(true); onPlay?.(); };
-    const onPause = () => { setPlaying(false); setShowControls(true); };
-    v.addEventListener('timeupdate', onTime);
-    v.addEventListener('loadedmetadata', onDur);
-    v.addEventListener('play', onPlayEvent);
+    const onMeta = () => setDuration(v.duration || 0);
+    v.addEventListener('play', onPlay);
     v.addEventListener('pause', onPause);
+    v.addEventListener('timeupdate', onTime);
+    v.addEventListener('loadedmetadata', onMeta);
     return () => {
-      v.removeEventListener('timeupdate', onTime);
-      v.removeEventListener('loadedmetadata', onDur);
-      v.removeEventListener('play', onPlayEvent);
+      v.removeEventListener('play', onPlay);
       v.removeEventListener('pause', onPause);
+      v.removeEventListener('timeupdate', onTime);
+      v.removeEventListener('loadedmetadata', onMeta);
     };
-  }, [activeSrc]);
+  }, []);
+
+  // Notify parent on first play
+  const hasNotified = useRef(false);
+  useEffect(() => {
+    if (playing && !hasNotified.current) {
+      hasNotified.current = true;
+      onPlay?.();
+    }
+  }, [playing, onPlay]);
 
   return (
     <div
@@ -180,7 +200,7 @@ const VideoPlayer = forwardRef<VideoPlayerHandle, VideoPlayerProps>(function Vid
     >
       <video
         ref={videoRef}
-        className="w-full aspect-video object-contain cursor-pointer"
+        className={isFullscreen ? 'w-full h-full object-contain cursor-pointer' : 'w-full aspect-video object-contain cursor-pointer'}
         src={activeSrc}
         poster={poster}
         playsInline
