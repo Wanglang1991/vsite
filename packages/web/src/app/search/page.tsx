@@ -8,6 +8,8 @@ import type { VideoItem } from '@/types';
 import { searchVideos } from '@/lib/api';
 import VideoGrid from '@/components/VideoGrid';
 
+const MAX_RESULTS = 1000;
+
 function SearchContent() {
   const searchParams = useSearchParams();
   const q = searchParams.get('q') || '';
@@ -22,6 +24,7 @@ function SearchContent() {
   const pageRef = useRef(1);
   const qRef = useRef(q);
   const seenIdsRef = useRef<Set<string>>(new Set());
+  const videoCountRef = useRef(0);
 
   useEffect(() => { qRef.current = q; }, [q]);
   useEffect(() => { pageRef.current = page; }, [page]);
@@ -40,6 +43,7 @@ function SearchContent() {
     searchVideos(q, 1).then(data => {
       if (!cancelled) {
         data.videos.forEach(v => ids.add(v.id));
+        videoCountRef.current = data.videos.length;
         setVideos(data.videos);
         setTotal(data.total);
         setHasMore(data.hasMore ?? false);
@@ -53,12 +57,14 @@ function SearchContent() {
   useEffect(() => {
     const loadMore = () => {
       if (loadingMoreRef.current || !hasMoreRef.current) return;
+      if (videoCountRef.current >= MAX_RESULTS) return;
       const nextPage = pageRef.current + 1;
       loadingMoreRef.current = true;
       setLoadingMore(true);
       searchVideos(qRef.current, nextPage).then(data => {
         const newVideos = data.videos.filter(v => !seenIdsRef.current.has(v.id));
         newVideos.forEach(v => seenIdsRef.current.add(v.id));
+        videoCountRef.current += newVideos.length;
         setVideos(prev => [...prev, ...newVideos]);
         setHasMore(data.hasMore ?? false);
         setPage(nextPage);

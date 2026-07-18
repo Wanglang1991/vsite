@@ -1,26 +1,46 @@
 'use client';
 
-import { useEffect, useState, Suspense } from 'react';
+import { useEffect, useState, Suspense, useRef, useLayoutEffect } from 'react';
 import type { VideoItem } from '@/types';
 import { getVideos, getCategoryVideos } from '@/lib/api';
 import Navbar from '@/components/Navbar';
 import CategoryBar from '@/components/CategoryBar';
 import VideoGrid from '@/components/VideoGrid';
+import { Loader2, ChevronUp } from 'lucide-react';
 
 const CAT_STORAGE_KEY = 'vsite_last_cat';
+const SCROLL_STORAGE_KEY = 'vsite_home_scroll';
 
 function HomeContent() {
   const [activeCat, setActiveCat] = useState<string | null>(null);
   const [videos, setVideos] = useState<VideoItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [restored, setRestored] = useState(false);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [page, setPage] = useState(1);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
-  // Restore from sessionStorage on mount
-  useEffect(() => {
+  const loadingMoreRef = useRef(false);
+  const hasMoreRef = useRef(false);
+  const pageRef = useRef(1);
+  const activeCatRef = useRef<string | null>(null);
+  const seenIdsRef = useRef<Set<string>>(new Set());
+  const shouldRestoreScroll = useRef(false);
+
+  useEffect(() => { activeCatRef.current = activeCat; }, [activeCat]);
+  useEffect(() => { pageRef.current = page; }, [page]);
+  useEffect(() => { hasMoreRef.current = hasMore; }, [hasMore]);
+  useEffect(() => { loadingMoreRef.current = loadingMore; }, [loadingMore]);
+
+  // Restore category + mark scroll restore from sessionStorage on mount
+  useLayoutEffect(() => {
     if (restored) return;
     try {
-      const saved = sessionStorage.getItem(CAT_STORAGE_KEY);
-      if (saved) setActiveCat(saved);
+      const savedCat = sessionStorage.getItem(CAT_STORAGE_KEY);
+      if (savedCat) setActiveCat(savedCat);
+      const savedScroll = sessionStorage.getItem(SCROLL_STORAGE_KEY);
+      if (savedScroll) shouldRestoreScroll.current = true;
     } catch {}
     setRestored(true);
   }, [restored]);
@@ -34,20 +54,97 @@ function HomeContent() {
     }
   }, [activeCat]);
 
-  // Fetch videos
+  // Fetch videos when category changes
   useEffect(() => {
+    const ids = new Set<string>();
+    seenIdsRef.current = ids;
     setLoading(true);
+    setPage(1);
+    setVideos([]);
     let cancelled = false;
-    (async () => {
-      const data = activeCat ? await getCategoryVideos(activeCat) : await getVideos();
-      if (!cancelled) { setVideos(data.videos); setLoading(false); }
-    })();
+    const fetchFn = activeCat
+      ? () => getCategoryVideos(activeCat, 1)
+      : () => getVideos({ page: 1, perPage: 24 });
+
+    fetchFn().then(data => {
+      if (!cancelled) {
+        data.videos.forEach(v => ids.add(v.id));
+        setVideos(data.videos);
+        setHasMore(data.hasMore ?? false);
+        setLoading(false);
+      }
+    });
     return () => { cancelled = true; };
   }, [activeCat]);
 
+  // Restore scroll position after data loads
+  useEffect(() => {
+    if (loading || !shouldRestoreScroll.current) return;
+    try {
+      const saved = sessionStorage.getItem(SCROLL_STORAGE_KEY);
+      if (saved) {
+        window.scrollTo({ top: Number(saved), behavior: 'instant' as ScrollBehavior });
+      }
+    } catch {}
+    shouldRestoreScroll.current = false;
+  }, [loading]);
+
+  // Infinite scroll + scroll position save + scroll-to-top visibility
+  useEffect(() => {
+    const loadMore = () => {
+      if (loadingMoreRef.current || !hasMoreRef.current) return;
+      const nextPage = pageRef.current + 1;
+      loadingMoreRef.current = true;
+      setLoadingMore(true);
+
+      const fetchFn = activeCatRef.current
+        ? () => getCategoryVideos(activeCatRef.current!, nextPage)
+        : () => getVideos({ page: nextPage, perPage: 24 });
+
+      fetchFn().then(data => {
+        const newVideos = data.videos.filter(v => !seenIdsRef.current.has(v.id));
+        newVideos.forEach(v => seenIdsRef.current.add(v.id));
+        setVideos(prev => [...prev, ...newVideos]);
+        setHasMore(data.hasMore ?? false);
+        setPage(nextPage);
+        loadingMoreRef.current = false;
+        setLoadingMore(false);
+      }).catch(() => {
+        loadingMoreRef.current = false;
+        setLoadingMore(false);
+      });
+    };
+
+    let raf = 0;
+    const onScroll = () => {
+      setShowScrollTop(window.scrollY > 300);
+
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        try { sessionStorage.setItem(SCROLL_STORAGE_KEY, String(window.scrollY)); } catch {}
+      });
+
+      const scrollBottom = window.innerHeight + window.scrollY;
+      const docBottom = document.documentElement.scrollHeight;
+      if (docBottom - scrollBottom < 300) {
+        loadMore();
+      }
+    };
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
+
   const handleSelectCat = (catId: string | null) => {
     setActiveCat(catId);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -67,9 +164,30 @@ function HomeContent() {
             ))}
           </div>
         ) : (
-          <VideoGrid videos={videos} />
+          <>
+            <VideoGrid videos={videos} />
+            {loadingMore && (
+              <div className="flex justify-center py-6">
+                <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
+              </div>
+            )}
+            {!hasMore && videos.length > 0 && (
+              <p className="text-center text-gray-600 text-sm py-6">已加载全部 {videos.length} 条结果</p>
+            )}
+          </>
         )}
       </main>
+
+      {/* Scroll to top button */}
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 z-50 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur border border-white/20 flex items-center justify-center transition-all duration-300 shadow-lg"
+          aria-label="回到顶部"
+        >
+          <ChevronUp className="w-5 h-5 text-white" />
+        </button>
+      )}
     </div>
   );
 }

@@ -6,17 +6,19 @@ import { videoCache } from '../services/videoCache.js';
 import type { VideoItem, CategoryInfo } from '../types.js';
 
 const CATEGORIES: { id: string; name: string; query: string }[] = [
-  { id: 'animation', name: '动画', query: 'animation' },
-  { id: 'music', name: '音乐', query: 'music' },
-  { id: 'game', name: '游戏', query: 'gaming' },
-  { id: 'sports', name: '运动', query: 'sports' },
-  { id: 'tech', name: '科技', query: 'technology' },
-  { id: 'nature', name: '自然', query: 'nature' },
-  { id: 'travel', name: '旅行', query: 'travel' },
-  { id: 'food', name: '美食', query: 'food' },
-  { id: 'film', name: '影视', query: 'movie trailer' },
-  { id: 'fashion', name: '时尚', query: 'fashion' },
+  { id: 'animation', name: '鍔ㄧ敾', query: 'animation' },
+  { id: 'music', name: '闊充箰', query: 'music' },
+  { id: 'game', name: '娓告垙', query: 'gaming' },
+  { id: 'sports', name: '杩愬姩', query: 'sports' },
+  { id: 'tech', name: '绉戞妧', query: 'technology' },
+  { id: 'nature', name: '鑷劧', query: 'nature' },
+  { id: 'travel', name: '鏃呰', query: 'travel' },
+  { id: 'food', name: '缇庨', query: 'food' },
+  { id: 'film', name: '褰辫', query: 'movie trailer' },
+  { id: 'fashion', name: '鏃跺皻', query: 'fashion' },
 ];
+
+const MAX_PER_CATEGORY = 500;
 
 export async function categoryRoutes(app: FastifyInstance) {
   app.get('/api/categories', async () => {
@@ -29,10 +31,18 @@ export async function categoryRoutes(app: FastifyInstance) {
     if (!category) return reply.status(404).send({ error: 'Category not found' });
 
     const page = Number(req.query.page) || 1;
+    const perPage = 20;
+    const cappedOffset = (page - 1) * perPage;
+    if (cappedOffset >= MAX_PER_CATEGORY) {
+      return { videos: [], page, perPage, total: MAX_PER_CATEGORY, hasMore: false };
+    }
+
+    const fetchPerPage = Math.min(perPage, MAX_PER_CATEGORY - cappedOffset);
+
     const [pexels, pixabay, youtube] = await Promise.all([
-      fetchPexelsVideos(category.query, page, 20).catch(() => ({ videos: [] as VideoItem[], total: 0 })),
-      fetchPixabayVideos(category.query, page, 20).catch(() => ({ videos: [] as VideoItem[], total: 0 })),
-      fetchYouTubeVideos(category.query, page, 20).catch(() => ({ videos: [] as VideoItem[], total: 0 })),
+      fetchPexelsVideos(category.query, page, fetchPerPage).catch(() => ({ videos: [] as VideoItem[], total: 0 })),
+      fetchPixabayVideos(category.query, page, fetchPerPage).catch(() => ({ videos: [] as VideoItem[], total: 0 })),
+      fetchYouTubeVideos(category.query, page, fetchPerPage).catch(() => ({ videos: [] as VideoItem[], total: 0 })),
     ]);
 
     videoCache.setAll(pexels.videos);
@@ -40,10 +50,14 @@ export async function categoryRoutes(app: FastifyInstance) {
     videoCache.setAll(youtube.videos);
 
     const all = [...pexels.videos, ...pixabay.videos, ...youtube.videos];
+    const rawTotal = pexels.total + pixabay.total + youtube.total;
+    const cappedTotal = Math.min(rawTotal, MAX_PER_CATEGORY);
+    const loadedSoFar = page * perPage;
+
     return {
-      videos: all, page, perPage: 20,
-      total: pexels.total + pixabay.total + youtube.total,
-      hasMore: page * 20 < (pexels.total + pixabay.total + youtube.total),
+      videos: all, page, perPage,
+      total: cappedTotal,
+      hasMore: loadedSoFar < cappedTotal && all.length > 0,
     };
   });
 }
